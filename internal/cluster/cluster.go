@@ -80,7 +80,7 @@ func New(cfg Config) (*Cluster, error) {
 		procs: make([]*exec.Cmd, cfg.N+1), exited: make([]chan struct{}, cfg.N+1), logs: make([]*os.File, cfg.N+1),
 	}
 	for i := 1; i <= cfg.N; i++ {
-		f, err := os.OpenFile(filepath.Join(cfg.Dir, fmt.Sprintf("n%d.log", i)), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+		f, err := os.OpenFile(filepath.Join(cfg.Dir, fmt.Sprintf("n%d.log", i)), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644) // one run's output; the data directory itself persists
 		if err != nil {
 			return nil, err
 		}

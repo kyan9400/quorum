@@ -28,7 +28,7 @@
 <!-- ================================================================ live -->
 <section id="view-live" class="view" hidden>
   <div class="intro">
-    <p>Five <code>quorumd</code> processes on one machine, each with its own write-ahead log, talking over links that can be cut. Six clients read, write, append and compare-and-set against them the whole time, and their history is checked for linearizability ten seconds at a time. <b>Break it</b>: kill nodes, cut the leader off, split the network. The cluster is shared with everyone looking at this page, and puts itself back together after <span data-bind="autoheal">30</span>&nbsp;s left alone.</p>
+    <p>Five <code>quorumd</code> processes on one machine, each with its own write-ahead log, talking over links that can be cut. <span data-bind="clients">Several</span> clients read, write, append and compare-and-set against them the whole time, and their history is checked for linearizability ten seconds at a time. <b>Break it</b>: kill nodes, cut the leader off, split the network. The cluster is shared with everyone looking at this page, and puts itself back together after <span data-bind="autoheal">30</span>&nbsp;s left alone.</p>
   </div>
 
   <div class="grid live-grid">

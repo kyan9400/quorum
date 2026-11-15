@@ -35,6 +35,8 @@ type live struct {
 	// a window's keys must be new to the cluster, not just to this process.
 	tag     string
 	opLimit time.Duration
+	clients int
+	pause   time.Duration // between a client's operations: pause plus up to pause more
 
 	mu       sync.Mutex
 	started  time.Time
@@ -96,7 +98,7 @@ const (
 
 func newLive(c *cluster.Cluster, span, autoHeal time.Duration) *live {
 	return &live{
-		c: c, window: span, keys: 3, tag: strconv.FormatInt(time.Now().Unix(), 36), opLimit: 6 * time.Second, started: time.Now(),
+		c: c, window: span, keys: 3, tag: strconv.FormatInt(time.Now().Unix(), 36), opLimit: 6 * time.Second, pause: 120 * time.Millisecond, started: time.Now(),
 		windows: map[int]*window{}, perSec: map[int64]*secondStats{}, autoHeal: autoHeal,
 	}
 }
@@ -107,6 +109,7 @@ func (l *live) windowAt(t time.Time) int { return int(t.Sub(l.started) / l.windo
 
 // run starts the workload and the checker; it returns when ctx is done.
 func (l *live) run(ctx context.Context, clients int) {
+	l.clients = clients
 	urls := l.c.URLs()
 	for ci := 0; ci < clients; ci++ {
 		pinned := 0
@@ -202,7 +205,7 @@ func (l *live) client(ctx context.Context, id, pinned int, cl *client.Client) {
 		l.mu.Unlock()
 		select {
 		case <-ctx.Done():
-		case <-time.After(time.Duration(120+r.IntN(160)) * time.Millisecond):
+		case <-time.After(l.pause + time.Duration(r.Int64N(int64(l.pause)+1))):
 		}
 	}
 }
@@ -425,6 +428,7 @@ type snapshot struct {
 	Rate      []rate           `json:"rate"` // the last 60 seconds
 	WindowS   float64          `json:"window_s"`
 	AutoHealS float64          `json:"auto_heal_s"`
+	Clients   int              `json:"clients"`
 	HealIn    float64          `json:"heal_in_s,omitempty"`
 }
 
@@ -445,7 +449,7 @@ type rate struct {
 func (l *live) snapshot() snapshot {
 	s := snapshot{
 		T: l.since(), Nodes: l.c.Statuses(), Cut: l.c.Cut(), Groups: l.c.Groups(),
-		WindowS: l.window.Seconds(), AutoHealS: l.autoHeal.Seconds(),
+		WindowS: l.window.Seconds(), AutoHealS: l.autoHeal.Seconds(), Clients: l.clients,
 	}
 	events := l.c.Events()
 	if len(events) > 30 {

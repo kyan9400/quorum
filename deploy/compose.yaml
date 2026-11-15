@@ -1,0 +1,38 @@
+# The public demo: the dashboard, which runs a five-node cluster of real
+# quorumd processes inside this one container, a small workload against it,
+# and the replays of the recorded Jepsen runs.
+#
+#   docker compose -f deploy/compose.yaml up -d --build
+#
+# Only the dashboard's port is reachable, and only through the edge proxy; the
+# nodes listen on loopback inside the container.
+name: quorum
+
+services:
+  dash:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: quorum:latest
+    container_name: quorum-dash
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+      app: quorum
+    deploy:
+      resources:
+        limits: { memory: 256m, cpus: "0.5", pids: 200 }
+    volumes:
+      - live:/data
+    networks: [edge]
+
+volumes:
+  live: {}
+
+networks:
+  edge:
+    external: true
+    name: edge

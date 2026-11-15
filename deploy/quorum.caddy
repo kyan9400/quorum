@@ -1,0 +1,32 @@
+# Quorum: the dashboard (compose project quorum, on the edge network as
+# quorum-dash). The live view streams server-sent events, so responses are
+# flushed as they are written.
+quorum.149-36-1-90.sslip.io {
+	import common
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+	}
+	@app {
+		method GET HEAD
+	}
+	@action {
+		method POST
+		path /api/live/action
+	}
+	handle @action {
+		request_body {
+			max_size 1KB
+		}
+		reverse_proxy quorum-dash:8080
+	}
+	handle @app {
+		reverse_proxy quorum-dash:8080 {
+			flush_interval -1
+		}
+	}
+	handle {
+		respond 405
+	}
+}

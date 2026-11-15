@@ -91,6 +91,8 @@ function sideOf(groups, id) {
 function renderLive(s) {
   for (const k of ["cut", "events", "windows", "pending", "recent", "rate"]) s[k] = s[k] || []; // Go sends null for empty
   $('[data-bind="autoheal"]').textContent = Math.round(s.auto_heal_s);
+  const words = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight"];
+  $('[data-bind="clients"]').textContent = words[s.clients] || s.clients;
   renderRing(s);
   renderNodes(s);
   renderVerdict(s);

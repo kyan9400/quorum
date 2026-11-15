@@ -6,10 +6,15 @@ simulator that runs a whole cluster under crashes, partitions and a hostile
 network inside one process, and a linearizability checker that verifies every
 history the clients saw.
 
-> **Status: stage 3 of 4.** Consensus, state machine, simulator and checker;
-> real processes with a write-ahead log, tested Jepsen-style and benchmarked;
-> a dashboard to break a live cluster with and to replay recorded runs. A
-> public deployment comes next.
+**Live: [quorum.149-36-1-90.sslip.io](https://quorum.149-36-1-90.sslip.io)** - a
+five-node cluster you can kill nodes in and partition, with its clients'
+history checked for linearizability as it runs, and replays of the recorded
+Jepsen runs.
+
+> **Status: complete (4 of 4 stages).** Consensus, state machine, simulator
+> and checker; real processes with a write-ahead log, tested Jepsen-style and
+> benchmarked; a dashboard to break a live cluster with and to replay recorded
+> runs; deployed.
 
 ## The result so far
 
@@ -95,7 +100,7 @@ comparison with production systems.
 
 **A live cluster you can break.** It runs five `quorumd` processes behind
 cuttable links - the same harness as the Jepsen runs, in `internal/cluster` -
-and six clients against them, half following the leader and half pinned to one
+and a handful of clients against them, half following the leader and half pinned to one
 node. The page shows each node's role, term and log four times a second: how
 far each log reaches, how much of it is committed, how much is compacted into a
 snapshot, and what the leader believes each follower holds. Buttons kill the
@@ -132,6 +137,22 @@ incorrect happens - the simulator and the checker agree - but the dashboard
 makes the cost obvious: a few faults in a row and the term is in the twenties.
 etcd's PreVote, where a node first asks whether it could win before raising its
 term, is the fix and is not implemented yet.
+
+## Deployment
+
+One container (`Dockerfile`, `deploy/compose.yaml`): the dashboard and the five
+`quorumd` processes it starts, on loopback inside the container, with the
+nodes' data on a volume. The image is built from scratch - the binaries and the
+recorded runs, no shell - and the build runs the test suite first, so an image
+that fails its own tests does not exist. A shared Caddy in front proxies only
+`GET` requests and the one action endpoint, and flushes the live stream as it is
+written.
+
+The machine is shared with other services, so the demo is sized not to be
+noticed. The first deployment, with a 50 ms tick and six clients, used about 45%
+of a core at rest; a 100 ms tick (elections after one to two seconds instead of
+half a second to one) and four slower clients brought it to about 13%. Every
+node still `fsync`s every write.
 
 ## How it is built
 
@@ -242,8 +263,7 @@ and a sequence number - the `client` package supplies both and retries safely.
    library, Jepsen-style testing and benchmarks, above.
 3. **A dashboard** - done: a live cluster to break, and replays of recorded
    runs, above.
-4. **Deployed**, with a write-up whose every number comes from a run that was
-   executed.
+4. **Deployed** - done, above.
 
 ## Licence
 

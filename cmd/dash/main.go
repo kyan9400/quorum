@@ -40,6 +40,8 @@ func main() {
 	windowD := flag.Duration("window", 10*time.Second, "how much history each linearizability check covers")
 	autoHeal := flag.Duration("auto-heal", 30*time.Second, "heal and restart everything after this long broken and untouched")
 	fsync := flag.Bool("fsync", true, "fsync on the live nodes")
+	tick := flag.String("tick", "50ms", "raft tick on the live nodes")
+	pause := flag.Duration("pause", 120*time.Millisecond, "each client waits between this and twice this between operations")
 	noLive := flag.Bool("no-live", false, "serve recorded runs only")
 	webDir := flag.String("web", "", "serve the page from this directory instead of the built-in copy (for development)")
 	flag.Parse()
@@ -73,7 +75,7 @@ func main() {
 
 	var lv *live
 	if !*noLive {
-		c, err := cluster.New(cluster.Config{Bin: *bin, Dir: *data, N: *nodes, BasePort: *base, Fsync: *fsync, Tick: "50ms", SnapshotEvery: 2000})
+		c, err := cluster.New(cluster.Config{Bin: *bin, Dir: *data, N: *nodes, BasePort: *base, Fsync: *fsync, Tick: *tick, SnapshotEvery: 2000})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -81,6 +83,7 @@ func main() {
 		c.StartAll()
 		c.WaitForLeader(20 * time.Second)
 		lv = newLive(c, *windowD, *autoHeal)
+		lv.pause = *pause
 		go lv.run(ctx, *clients)
 
 		mux.HandleFunc("GET /api/live", func(w http.ResponseWriter, _ *http.Request) {
