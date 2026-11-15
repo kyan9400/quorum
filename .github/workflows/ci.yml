@@ -1,0 +1,31 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version: "1.27.3"
+
+      - name: formatted
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+
+      - name: vet
+        run: go vet ./...
+
+      - name: tests, with the race detector
+        run: go test -race -count=1 ./...
+
+      # A different slice of seeds on every run, so CI keeps exploring rather
+      # than re-checking the same thousand. A failure prints its seed, which
+      # replays exactly with: go run ./cmd/sim -seed N
+      - name: simulation, 500 seeds
+        run: go run ./cmd/sim -from $(( (GITHUB_RUN_NUMBER * 500) % 1000000 + 1 )) -seeds 500
