@@ -1,0 +1,20 @@
+{
+  "clients": 10,
+  "completed": 52143,
+  "duration_s": 180,
+  "faults": {
+    "isolate-leader": 7,
+    "kill": 6,
+    "kill-leader": 9,
+    "partition": 12
+  },
+  "fsync": true,
+  "keys": 5,
+  "linearizable": true,
+  "nodes": 5,
+  "operations": 52162,
+  "seed": 3,
+  "torn_bytes_recovered": 0,
+  "unknown": 19,
+  "verdict_unknown": false
+}

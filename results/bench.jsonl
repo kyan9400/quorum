@@ -1,0 +1,16 @@
+{"label":"3 nodes","op":"write","clients":1,"requests":3059,"errors":0,"per_sec":254.9,"p50_ms":3.612,"p99_ms":8.801,"duration_s":12}
+{"label":"3 nodes","op":"write","clients":4,"requests":6261,"errors":0,"per_sec":521.3,"p50_ms":7.112,"p99_ms":17.225,"duration_s":12}
+{"label":"3 nodes","op":"write","clients":16,"requests":15618,"errors":0,"per_sec":1300.7,"p50_ms":11.382,"p99_ms":29.23,"duration_s":12}
+{"label":"3 nodes","op":"write","clients":64,"requests":27736,"errors":0,"per_sec":2309,"p50_ms":25.319,"p99_ms":65.477,"duration_s":12}
+{"label":"3 nodes","op":"read","clients":1,"requests":11518,"errors":0,"per_sec":959.8,"p50_ms":0.923,"p99_ms":2.69,"duration_s":12}
+{"label":"3 nodes","op":"read","clients":4,"requests":25516,"errors":0,"per_sec":2126.1,"p50_ms":1.675,"p99_ms":5.191,"duration_s":12}
+{"label":"3 nodes","op":"read","clients":16,"requests":62737,"errors":0,"per_sec":5224.9,"p50_ms":2.712,"p99_ms":8.449,"duration_s":12}
+{"label":"3 nodes","op":"read","clients":64,"requests":90195,"errors":0,"per_sec":7509.1,"p50_ms":7.694,"p99_ms":22,"duration_s":12}
+{"label":"5 nodes","op":"write","clients":1,"requests":2442,"errors":0,"per_sec":203.5,"p50_ms":4.467,"p99_ms":10.736,"duration_s":12}
+{"label":"5 nodes","op":"write","clients":4,"requests":4254,"errors":0,"per_sec":354,"p50_ms":10.469,"p99_ms":24.694,"duration_s":12}
+{"label":"5 nodes","op":"write","clients":16,"requests":10078,"errors":0,"per_sec":838.3,"p50_ms":17.767,"p99_ms":41.039,"duration_s":12}
+{"label":"5 nodes","op":"write","clients":64,"requests":17362,"errors":0,"per_sec":1442.1,"p50_ms":42.042,"p99_ms":84.88,"duration_s":12}
+{"label":"5 nodes","op":"read","clients":1,"requests":8154,"errors":0,"per_sec":679.5,"p50_ms":1.252,"p99_ms":4.642,"duration_s":12}
+{"label":"5 nodes","op":"read","clients":4,"requests":16427,"errors":0,"per_sec":1368.6,"p50_ms":2.598,"p99_ms":8.144,"duration_s":12}
+{"label":"5 nodes","op":"read","clients":16,"requests":36142,"errors":0,"per_sec":3011.2,"p50_ms":4.72,"p99_ms":14.482,"duration_s":12}
+{"label":"5 nodes","op":"read","clients":64,"requests":65581,"errors":0,"per_sec":5459.6,"p50_ms":10.722,"p99_ms":29.209,"duration_s":12}

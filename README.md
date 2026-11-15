@@ -6,9 +6,9 @@ simulator that runs a whole cluster under crashes, partitions and a hostile
 network inside one process, and a linearizability checker that verifies every
 history the clients saw.
 
-> **Status: stage 1 of 4.** The consensus core, the state machine, the
-> simulator and the checker are done. Stage 2 runs it as real processes with a
-> write-ahead log on disk, under Jepsen-style fault injection.
+> **Status: stage 2 of 4.** Consensus, state machine, simulator and checker;
+> real processes with a write-ahead log, tested Jepsen-style and benchmarked.
+> A dashboard and a deployment come next.
 
 ## The result so far
 
@@ -24,6 +24,67 @@ crash and restart, the network partitions and heals, and messages are dropped,
 delayed, duplicated and reordered. Every history every client observed was
 linearizable, no index was ever applied with different contents on two nodes,
 and no term ever had two leaders. On a laptop, 75 seconds.
+
+## Real processes, real faults
+
+Three runs of a five-node cluster on Linux, each node its own `quorumd`
+process with its own write-ahead log and `fsync` on every write, three
+minutes each, ten clients, a fault every five seconds on average:
+
+| run | operations | partitions | leader isolated | `kill -9` | `kill -9` the leader | verdict |
+| --- | --- | --- | --- | --- | --- | --- |
+| seed 1 | 49,685 | 14 | 12 | 8 | 5 | linearizable |
+| seed 2 | 52,714 | 16 | 5 | 12 | 5 | linearizable |
+| seed 3 | 52,162 | 12 | 7 | 6 | 9 | linearizable |
+
+154,561 operations through 111 faults, every history linearizable. After each
+run every node was killed and restarted from disk once more, and all five came
+back at the same commit index. 61 operations ended with an unknown outcome -
+the client's deadline passed during a fault - and the checker allowed for both
+possibilities, as it must. Summaries, fault timelines and full histories are in
+`results/`.
+
+The harness (`cmd/jepsen`) runs every node-to-node link through its own proxy,
+one per direction, so a partition can be asymmetric and a cut link
+black-holes rather than refusing politely. Half the clients follow the leader;
+half are pinned to one node each, which forwards to the leader over the same
+cuttable links.
+
+That split exists because the first version of the harness was blind. Run
+against a build that answered reads from any node's local state - the classic
+stale-read bug - it passed. Its clients all followed the leader, and a client
+whose write stalls leaves an isolated node within a second and a half, so
+nothing ever read from the minority side. With pinned clients the same bug
+fails within a minute, with the history showing a read going back in time.
+
+**What `kill -9` does not test.** Killing a process does not kill the
+operating system: data written but not yet `fsync`ed still reaches the disk.
+These runs prove recovery from process crashes, not from power loss, which is
+also why none of them found a torn record to repair. The torn-tail and
+mid-file-damage cases are covered by the storage tests instead.
+
+### Throughput and latency
+
+One virtual machine with four shared vCPUs, every node on it, talking over
+loopback, `fsync` on a virtual disk, 100-byte values, closed loop:
+
+| cluster | clients | writes / s | write p50 | write p99 | reads / s | read p50 | read p99 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 3 nodes | 1 | 255 | 3.6 ms | 8.8 ms | 960 | 0.9 ms | 2.7 ms |
+| 3 nodes | 16 | 1,301 | 11.4 ms | 29.2 ms | 5,225 | 2.7 ms | 8.4 ms |
+| 3 nodes | 64 | 2,309 | 25.3 ms | 65.5 ms | 7,509 | 7.7 ms | 22.0 ms |
+| 5 nodes | 1 | 204 | 4.5 ms | 10.7 ms | 680 | 1.3 ms | 4.6 ms |
+| 5 nodes | 16 | 838 | 17.8 ms | 41.0 ms | 3,011 | 4.7 ms | 14.5 ms |
+| 5 nodes | 64 | 1,442 | 42.0 ms | 84.9 ms | 5,460 | 10.7 ms | 29.2 ms |
+
+A write is acknowledged only after a majority has written it to disk, and a
+read only after a majority has confirmed the leader is still the leader - so
+reads are about four times cheaper than writes, not free. Writes scale with
+clients because one `fsync` covers every entry that arrived while the last one
+was running. Five nodes are slower than three on this machine because all five
+share its four cores; on separate machines the gap would be smaller. Treat
+every figure here as a lower bound from a small shared box, not as a
+comparison with production systems.
 
 ## How it is built
 
@@ -105,18 +166,33 @@ before it asserts anything.
 ## Running it
 
 ```bash
-go test ./...                       # 22 tests, a few seconds
+go test ./...                       # 34 tests
 go run ./cmd/sim -seeds 2000        # the simulation
 go run ./cmd/sim -seed 7            # one seed, replayed exactly
+
+go build -o bin/ ./cmd/...
+bin/jepsen -bin bin/quorumd -duration 3m      # five real processes under faults
 ```
+
+A cluster by hand:
+
+```bash
+P=1=http://127.0.0.1:7001,2=http://127.0.0.1:7002,3=http://127.0.0.1:7003
+bin/quorumd -id 1 -listen :7001 -peers $P -data d1 &
+bin/quorumd -id 2 -listen :7002 -peers $P -data d2 &
+bin/quorumd -id 3 -listen :7003 -peers $P -data d3 &
+curl -s localhost:7002/kv -d '{"op":"put","key":"a","value":"1","client":7,"seq":1}'
+curl -s localhost:7003/kv -d '{"op":"get","key":"a"}'
+```
+
+Any node accepts requests and forwards to the leader. Writes need a client id
+and a sequence number - the `client` package supplies both and retries safely.
 
 ## Plan
 
 1. **Consensus, state machine, simulator, checker** - done.
-2. **Real processes**: a write-ahead log with fsync, a network transport, a
-   client library, and Jepsen-style tests that kill processes and cut the
-   network between them, checked by the same linearizability checker; plus
-   throughput and latency on real hardware.
+2. **Real processes** - done: a write-ahead log, an HTTP transport, a client
+   library, Jepsen-style testing and benchmarks, above.
 3. **A dashboard**: the cluster's roles, terms and log positions live, and the
    history of a run with its partitions and crashes.
 4. **Deployed**, with a write-up whose every number comes from a run that was
