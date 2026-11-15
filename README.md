@@ -78,11 +78,11 @@ A suite that passes two thousand seeds on code written days ago is as likely
 to be blind as right. So five changes known to break Raft were made on
 purpose, one at a time, and run against both the simulator and the tests:
 
-| deliberately broken | simulation, 300 seeds | tests |
+| deliberately broken | simulation, 500 seeds | tests |
 | --- | --- | --- |
 | election restriction removed: votes go to shorter logs | caught | caught |
-| ReadIndex served without confirming leadership | caught (26 seeds) | caught |
-| exactly-once removed: retries applied twice | caught (every seed) | caught |
+| ReadIndex served without confirming leadership | caught (21 of 500 seeds) | caught |
+| exactly-once removed: retries applied twice | caught (500 of 500) | caught |
 | Figure 8 rule removed: old terms committed by counting | **missed** | caught |
 | vote not persisted: a restarted node votes twice | **missed** | caught |
 
