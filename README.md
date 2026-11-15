@@ -55,7 +55,7 @@ against a build that answered reads from any node's local state - the classic
 stale-read bug - it passed. Its clients all followed the leader, and a client
 whose write stalls leaves an isolated node within a second and a half, so
 nothing ever read from the minority side. With pinned clients the same bug
-fails within a minute, with the history showing a read going back in time.
+failed a 45-second run, with the history showing a read going back in time.
 
 **What `kill -9` does not test.** Killing a process does not kill the
 operating system: data written but not yet `fsync`ed still reaches the disk.
@@ -79,7 +79,7 @@ loopback, `fsync` on a virtual disk, 100-byte values, closed loop:
 
 A write is acknowledged only after a majority has written it to disk, and a
 read only after a majority has confirmed the leader is still the leader - so
-reads are about four times cheaper than writes, not free. Writes scale with
+reads are three to four times cheaper than writes (3.8x for one client, 3.3x at 64), not free. Writes scale with
 clients because one `fsync` covers every entry that arrived while the last one
 was running. Five nodes are slower than three on this machine because all five
 share its four cores; on separate machines the gap would be smaller. Treat
