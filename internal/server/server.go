@@ -362,7 +362,7 @@ func (s *Server) serveReads() {
 
 func (s *Server) maybeCompact() {
 	applied := s.store.Applied()
-	if applied < s.node.Status().Snapshot+s.cfg.SnapshotEvery {
+	if applied < s.node.SnapshotIndex()+s.cfg.SnapshotEvery {
 		return
 	}
 	data := s.store.Snapshot()

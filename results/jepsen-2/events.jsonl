@@ -1,0 +1,78 @@
+{"t":0.00371751,"kind":"start-all","text":"started 5 nodes"}
+{"t":6.331875527,"kind":"partition","groups":[[4],[1,2,3,5]],"text":"isolated the leader n4"}
+{"t":9.782132876,"kind":"heal","text":"healed the network"}
+{"t":9.79132393,"kind":"kill","node":5,"text":"kill -9 n5"}
+{"t":13.934387374,"kind":"start","node":5,"text":"started n5"}
+{"t":13.934447603,"kind":"partition","groups":[[2,4],[3,5,1]],"text":"partition [2 4] | [3 5 1]"}
+{"t":20.480488778,"kind":"heal","text":"healed the network"}
+{"t":20.480521098,"kind":"partition","groups":[[3,5],[4,2,1]],"text":"partition [3 5] | [4 2 1]"}
+{"t":24.32727848,"kind":"heal","text":"healed the network"}
+{"t":24.327372339,"kind":"partition","groups":[[5],[3,2,4,1]],"text":"partition [5] | [3 2 4 1]"}
+{"t":30.266449902,"kind":"heal","text":"healed the network"}
+{"t":30.268823166,"kind":"kill","node":3,"text":"kill -9 n3"}
+{"t":32.878978943,"kind":"start","node":3,"text":"started n3"}
+{"t":32.879029973,"kind":"partition","groups":[[5,2,3],[4,1]],"text":"partition [5 2 3] | [4 1]"}
+{"t":39.020640726,"kind":"heal","text":"healed the network"}
+{"t":39.023554107,"kind":"kill","node":4,"text":"kill -9 n4"}
+{"t":45.794255747,"kind":"start","node":4,"text":"started n4"}
+{"t":45.794326336,"kind":"partition","groups":[[1,2],[5,4,3]],"text":"partition [1 2] | [5 4 3]"}
+{"t":48.628218584,"kind":"heal","text":"healed the network"}
+{"t":48.630355988,"kind":"kill","node":2,"text":"kill -9 n2"}
+{"t":53.65138496,"kind":"start","node":2,"text":"started n2"}
+{"t":53.65143214,"kind":"partition","groups":[[2],[5,3,1,4]],"text":"partition [2] | [5 3 1 4]"}
+{"t":57.203580961,"kind":"heal","text":"healed the network"}
+{"t":57.20361754,"kind":"partition","groups":[[3,5],[4,2,1]],"text":"partition [3 5] | [4 2 1]"}
+{"t":61.8328688,"kind":"heal","text":"healed the network"}
+{"t":61.834555016,"kind":"partition","groups":[[1,5],[3,4,2]],"text":"partition [1 5] | [3 4 2]"}
+{"t":65.393944427,"kind":"heal","text":"healed the network"}
+{"t":65.396449089,"kind":"partition","groups":[[2],[1,3,4,5]],"text":"isolated the leader n2"}
+{"t":71.486195168,"kind":"heal","text":"healed the network"}
+{"t":71.493077969,"kind":"kill","node":5,"text":"kill -9 n5"}
+{"t":77.748016504,"kind":"start","node":5,"text":"started n5"}
+{"t":77.75282292,"kind":"partition","groups":[[1],[2,3,4,5]],"text":"isolated the leader n1"}
+{"t":82.579886007,"kind":"heal","text":"healed the network"}
+{"t":82.581830331,"kind":"partition","groups":[[3],[1,2,4,5]],"text":"isolated the leader n3"}
+{"t":86.913668017,"kind":"heal","text":"healed the network"}
+{"t":86.921558774,"kind":"kill","node":4,"text":"kill -9 n4"}
+{"t":91.362084843,"kind":"start","node":4,"text":"started n4"}
+{"t":91.36289255,"kind":"kill","node":4,"text":"kill -9 n4"}
+{"t":98.470397547,"kind":"start","node":4,"text":"started n4"}
+{"t":98.474961034,"kind":"partition","groups":[[5],[1,2,3,4]],"text":"isolated the leader n5"}
+{"t":103.001453803,"kind":"heal","text":"healed the network"}
+{"t":103.006584178,"kind":"kill","node":1,"text":"kill -9 n1"}
+{"t":107.491518215,"kind":"start","node":1,"text":"started n1"}
+{"t":107.501434027,"kind":"kill","node":2,"text":"kill -9 the leader n2"}
+{"t":113.489710076,"kind":"start","node":2,"text":"started n2"}
+{"t":113.503176907,"kind":"kill","node":5,"text":"kill -9 the leader n5"}
+{"t":120.232684656,"kind":"start","node":5,"text":"started n5"}
+{"t":120.232735225,"kind":"partition","groups":[[3],[2,4,5,1]],"text":"partition [3] | [2 4 5 1]"}
+{"t":123.636228407,"kind":"heal","text":"healed the network"}
+{"t":123.639187558,"kind":"kill","node":5,"text":"kill -9 n5"}
+{"t":126.968894857,"kind":"start","node":5,"text":"started n5"}
+{"t":126.968929706,"kind":"partition","groups":[[4,5,2],[1,3]],"text":"partition [4 5 2] | [1 3]"}
+{"t":130.999782029,"kind":"heal","text":"healed the network"}
+{"t":131.003325669,"kind":"kill","node":1,"text":"kill -9 n1"}
+{"t":138.273605618,"kind":"start","node":1,"text":"started n1"}
+{"t":138.273655138,"kind":"partition","groups":[[4,3,2],[5,1]],"text":"partition [4 3 2] | [5 1]"}
+{"t":141.726306513,"kind":"heal","text":"healed the network"}
+{"t":141.729604123,"kind":"kill","node":1,"text":"kill -9 n1"}
+{"t":147.16083954,"kind":"start","node":1,"text":"started n1"}
+{"t":147.16088159,"kind":"partition","groups":[[4],[1,5,3,2]],"text":"partition [4] | [1 5 3 2]"}
+{"t":149.980199652,"kind":"heal","text":"healed the network"}
+{"t":149.980237111,"kind":"partition","groups":[[5,1,2,4],[3]],"text":"partition [5 1 2 4] | [3]"}
+{"t":155.160645287,"kind":"heal","text":"healed the network"}
+{"t":155.160681727,"kind":"partition","groups":[[4,2],[5,3,1]],"text":"partition [4 2] | [5 3 1]"}
+{"t":157.737022764,"kind":"heal","text":"healed the network"}
+{"t":157.737065553,"kind":"partition","groups":[[5],[1,3,4,2]],"text":"partition [5] | [1 3 4 2]"}
+{"t":162.281590101,"kind":"heal","text":"healed the network"}
+{"t":162.294015697,"kind":"kill","node":3,"text":"kill -9 the leader n3"}
+{"t":165.037150285,"kind":"start","node":3,"text":"started n3"}
+{"t":165.039926297,"kind":"kill","node":4,"text":"kill -9 n4"}
+{"t":170.735327513,"kind":"start","node":4,"text":"started n4"}
+{"t":170.735369053,"kind":"partition","groups":[[5,3,2,4],[1]],"text":"partition [5 3 2 4] | [1]"}
+{"t":176.558372081,"kind":"heal","text":"healed the network"}
+{"t":176.569502788,"kind":"kill","node":3,"text":"kill -9 the leader n3"}
+{"t":179.280198069,"kind":"start","node":3,"text":"started n3"}
+{"t":179.288833484,"kind":"kill","node":5,"text":"kill -9 the leader n5"}
+{"t":183.542120687,"kind":"start-all","text":"started 5 nodes"}
+{"t":188.594599626,"kind":"restart-all","text":"kill -9 and restart every node"}

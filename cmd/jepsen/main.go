@@ -15,20 +15,15 @@
 package main
 
 import (
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"math/rand/v2"
-	"net"
-	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -37,158 +32,73 @@ import (
 
 	"github.com/kyan9400/quorum/client"
 	"github.com/kyan9400/quorum/internal/check"
+	"github.com/kyan9400/quorum/internal/cluster"
 )
 
-type cluster struct {
-	bin      string
-	dir      string
-	n        int
-	nodePort func(int) int
-	linkPort func(from, to int) int
-	procs    []*exec.Cmd
-	logs     []*os.File
-	cut      sync.Map // "from-to" -> true
-	fsync    bool
-	tick     string
-	events   *eventLog
+// sample is one poll of every node, for the dashboard's replay of the run.
+type sample struct {
+	T     float64     `json:"t"`
+	Nodes []nodePoint `json:"nodes"`
 }
 
-type eventLog struct {
-	mu    sync.Mutex
-	start time.Time
-	lines []string
+// nodePoint: state is "" when the node did not answer and "down" when its
+// process was not running.
+type nodePoint struct {
+	State  string `json:"s"`
+	Term   uint64 `json:"term,omitempty"`
+	Lead   uint64 `json:"lead,omitempty"`
+	Commit uint64 `json:"commit,omitempty"`
+	Last   uint64 `json:"last,omitempty"`
 }
 
-func (e *eventLog) add(format string, a ...any) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	line := fmt.Sprintf("%7.2fs  %s", time.Since(e.start).Seconds(), fmt.Sprintf(format, a...))
-	e.lines = append(e.lines, line)
-	log.Print(line)
-}
-
-func (c *cluster) url(i int) string { return fmt.Sprintf("http://127.0.0.1:%d", c.nodePort(i)) }
-
-// startProxies runs one reverse proxy per directed link. A cut link
-// black-holes: the request hangs, as a dropped packet does, then fails.
-func (c *cluster) startProxies() {
-	for from := 1; from <= c.n; from++ {
-		for to := 1; to <= c.n; to++ {
-			if from == to {
-				continue
-			}
-			target, _ := url.Parse(c.url(to))
-			rp := httputil.NewSingleHostReverseProxy(target)
-			rp.ErrorHandler = func(w http.ResponseWriter, _ *http.Request, _ error) { w.WriteHeader(http.StatusBadGateway) }
-			key := fmt.Sprintf("%d-%d", from, to)
-			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if _, cut := c.cut.Load(key); cut {
-					select {
-					case <-time.After(800 * time.Millisecond):
-					case <-r.Context().Done():
-					}
-					if hj, ok := w.(http.Hijacker); ok {
-						if conn, _, err := hj.Hijack(); err == nil {
-							conn.Close()
-							return
-						}
-					}
-					w.WriteHeader(http.StatusBadGateway)
-					return
-				}
-				rp.ServeHTTP(w, r)
-			})
-			ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", c.linkPort(from, to)))
-			if err != nil {
-				log.Fatal(err)
-			}
-			go http.Serve(ln, handler)
+// recordTimeline polls every node until stop is closed.
+func recordTimeline(c *cluster.Cluster, every time.Duration, stop <-chan struct{}) []sample {
+	var out []sample
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for {
+		select {
+		case <-stop:
+			return out
+		case <-t.C:
 		}
-	}
-}
-
-func (c *cluster) start(i int) {
-	var peers, advertise []string
-	for j := 1; j <= c.n; j++ {
-		if j == i {
-			peers = append(peers, fmt.Sprintf("%d=%s", j, c.url(j)))
-		} else {
-			peers = append(peers, fmt.Sprintf("%d=http://127.0.0.1:%d", j, c.linkPort(i, j)))
+		s := sample{T: c.Since()}
+		for _, st := range c.Statuses() {
+			p := nodePoint{State: st.State, Term: st.Term, Lead: st.Lead, Commit: st.Commit, Last: st.Last}
+			if !st.Up {
+				p = nodePoint{State: "down"}
+			}
+			s.Nodes = append(s.Nodes, p)
 		}
-		advertise = append(advertise, fmt.Sprintf("%d=%s", j, c.url(j)))
-	}
-	cmd := exec.Command(c.bin,
-		"-id", fmt.Sprint(i), "-listen", fmt.Sprintf("127.0.0.1:%d", c.nodePort(i)),
-		"-peers", strings.Join(peers, ","), "-advertise", strings.Join(advertise, ","),
-		"-data", filepath.Join(c.dir, fmt.Sprintf("n%d", i)), "-tick", c.tick,
-		"-fsync="+fmt.Sprint(c.fsync), "-snapshot-every", "500")
-	cmd.Stdout = c.logs[i]
-	cmd.Stderr = c.logs[i]
-	if err := cmd.Start(); err != nil {
-		log.Fatal(err)
-	}
-	c.procs[i] = cmd
-}
-
-func (c *cluster) kill(i int) {
-	if p := c.procs[i]; p != nil && p.Process != nil {
-		p.Process.Kill() // SIGKILL on Linux: no shutdown, no flush
-		p.Wait()
-		c.procs[i] = nil
+		out = append(out, s)
 	}
 }
 
-func (c *cluster) alive(i int) bool { return c.procs[i] != nil }
-
-type status struct {
-	ID     uint64 `json:"id"`
-	State  string `json:"state"`
-	Term   uint64 `json:"term"`
-	Lead   uint64 `json:"lead"`
-	Commit uint64 `json:"commit"`
-	Recov  int64  `json:"recovered_torn_bytes"`
-}
-
-func (c *cluster) status(i int) (status, bool) {
-	cl := http.Client{Timeout: 300 * time.Millisecond}
-	resp, err := cl.Get(c.url(i) + "/status")
+func writeJSONL[T any](path string, items []T, gz bool) error {
+	f, err := os.Create(path)
 	if err != nil {
-		return status{}, false
+		return err
 	}
-	defer resp.Body.Close()
-	var s status
-	if json.NewDecoder(resp.Body).Decode(&s) != nil {
-		return status{}, false
+	defer f.Close()
+	var w interface {
+		Write([]byte) (int, error)
+	} = f
+	var zw *gzip.Writer
+	if gz {
+		zw = gzip.NewWriter(f)
+		w = zw
 	}
-	return s, true
-}
-
-func (c *cluster) leader() int {
-	for i := 1; i <= c.n; i++ {
-		if s, ok := c.status(i); ok && s.State == "leader" {
-			return i
+	enc := json.NewEncoder(w)
+	for _, it := range items {
+		if err := enc.Encode(it); err != nil {
+			return err
 		}
 	}
-	return 0
-}
-
-func (c *cluster) partition(groups [][]int) {
-	group := map[int]int{}
-	for g, members := range groups {
-		for _, m := range members {
-			group[m] = g
-		}
+	if zw != nil {
+		return zw.Close()
 	}
-	for a := 1; a <= c.n; a++ {
-		for b := 1; b <= c.n; b++ {
-			if a != b && group[a] != group[b] {
-				c.cut.Store(fmt.Sprintf("%d-%d", a, b), true)
-			}
-		}
-	}
+	return nil
 }
-
-func (c *cluster) heal() { c.cut.Clear() }
 
 func main() {
 	bin := flag.String("bin", "./quorumd", "quorumd binary")
@@ -204,40 +114,30 @@ func main() {
 	seed := flag.Uint64("seed", uint64(time.Now().UnixNano()), "nemesis and workload seed")
 	flag.Parse()
 
-	abs, err := filepath.Abs(*bin)
+	os.RemoveAll(*out)
+	var eventLines []string
+	c, err := cluster.New(cluster.Config{
+		Bin: *bin, Dir: *out, N: *nodes, BasePort: *base, Fsync: *fsync, Tick: *tick, SnapshotEvery: 500,
+		OnEvent: func(e cluster.Event) {
+			line := fmt.Sprintf("%7.2fs  %s", e.T, e.Text)
+			eventLines = append(eventLines, line)
+			log.Print(line)
+		},
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	os.RemoveAll(*out)
-	os.MkdirAll(*out, 0o755)
-	events := &eventLog{start: time.Now()}
-	c := &cluster{
-		bin: abs, dir: *out, n: *nodes, fsync: *fsync, tick: *tick, events: events,
-		nodePort: func(i int) int { return *base + i },
-		linkPort: func(from, to int) int { return *base + 100 + from*10 + to },
-		procs:    make([]*exec.Cmd, *nodes+1),
-		logs:     make([]*os.File, *nodes+1),
+	defer c.Close()
+	c.StartAll()
+	stopTimeline := make(chan struct{})
+	timelineDone := make(chan []sample)
+	go func() { timelineDone <- recordTimeline(c, 250*time.Millisecond, stopTimeline) }()
+	if !c.WaitForLeader(20 * time.Second) {
+		log.Print("no leader within 20s")
 	}
-	for i := 1; i <= c.n; i++ {
-		c.logs[i], _ = os.Create(filepath.Join(*out, fmt.Sprintf("n%d.log", i)))
-	}
-	c.startProxies()
-	for i := 1; i <= c.n; i++ {
-		c.start(i)
-	}
-	defer func() {
-		for i := 1; i <= c.n; i++ {
-			c.kill(i)
-		}
-	}()
-	events.add("started %d nodes, seed %d, fsync %v", c.n, *seed, *fsync)
-	waitForLeader(c, 20*time.Second)
 
 	rng := rand.New(rand.NewPCG(*seed, 1))
-	var urls []string
-	for i := 1; i <= c.n; i++ {
-		urls = append(urls, c.url(i))
-	}
+	urls := c.URLs()
 
 	var (
 		mu      sync.Mutex
@@ -246,12 +146,12 @@ func main() {
 	)
 	start := time.Now()
 	stamp := func() int64 { return time.Since(start).Nanoseconds() }
+	offset := c.Since() // history times are relative to start; the timeline's to the cluster's start
 	stopClients := make(chan struct{})
 	var wg sync.WaitGroup
 	for ci := 0; ci < *clients; ci++ {
 		wg.Add(1)
 		cseed := rng.Uint64()
-		ci := ci
 		go func() {
 			defer wg.Done()
 			r := rand.New(rand.NewPCG(cseed, 2))
@@ -324,17 +224,16 @@ func main() {
 		if !time.Now().Before(deadline) {
 			break
 		}
-		c.heal()
-		for i := 1; i <= c.n; i++ {
-			if !c.alive(i) {
-				c.start(i)
-				events.add("restarted n%d", i)
+		c.Heal()
+		for i := 1; i <= c.N(); i++ {
+			if !c.Alive(i) {
+				c.Start(i)
 			}
 		}
 		switch rng.IntN(5) {
 		case 0, 1:
-			perm := rng.Perm(c.n)
-			cut := 1 + rng.IntN(c.n-1)
+			perm := rng.Perm(c.N())
+			cut := 1 + rng.IntN(c.N()-1)
 			var a, b []int
 			for k, p := range perm {
 				if k < cut {
@@ -343,77 +242,61 @@ func main() {
 					b = append(b, p+1)
 				}
 			}
-			c.partition([][]int{a, b})
+			c.Partition([][]int{a, b}, "")
 			faults["partition"]++
-			events.add("partition %v | %v", a, b)
 		case 2:
-			if l := c.leader(); l != 0 {
-				var rest []int
-				for i := 1; i <= c.n; i++ {
-					if i != l {
-						rest = append(rest, i)
-					}
-				}
-				c.partition([][]int{{l}, rest})
+			if l := c.Leader(); l != 0 {
+				c.Isolate(l, "the leader")
 				faults["isolate-leader"]++
-				events.add("isolated the leader n%d", l)
 			}
 		case 3:
-			i := 1 + rng.IntN(c.n)
-			c.kill(i)
+			c.Kill(1+rng.IntN(c.N()), "")
 			faults["kill"]++
-			events.add("kill -9 n%d", i)
 		case 4:
-			if l := c.leader(); l != 0 {
-				c.kill(l)
+			if l := c.Leader(); l != 0 {
+				c.Kill(l, "the leader")
 				faults["kill-leader"]++
-				events.add("kill -9 the leader n%d", l)
 			}
 		}
 	}
-	c.heal()
-	for i := 1; i <= c.n; i++ {
-		if !c.alive(i) {
-			c.start(i)
-			events.add("restarted n%d", i)
-		}
-	}
-	events.add("healed; letting clients finish")
-	time.Sleep(5 * time.Second)
+	c.Heal()
+	c.StartAll()
+	time.Sleep(5 * time.Second) // let clients finish on a healed cluster
 	close(stopClients)
 	wg.Wait()
 
 	// Every node restarted from disk at least once more, then all must agree.
-	recovered := int64(0)
-	for i := 1; i <= c.n; i++ {
-		c.kill(i)
-		c.start(i)
-	}
-	waitForLeader(c, 20*time.Second)
+	c.RestartAll()
+	c.WaitForLeader(20 * time.Second)
 	time.Sleep(3 * time.Second)
 	commits := map[uint64]int{}
-	for i := 1; i <= c.n; i++ {
-		if s, ok := c.status(i); ok {
+	recovered := int64(0)
+	for _, s := range c.Statuses() {
+		if s.Answered {
 			commits[s.Commit]++
 			recovered += s.Recov
 		}
 	}
-	events.add("final restart of every node; commit indexes %v", commits)
+	line := fmt.Sprintf("%7.2fs  commit indexes after the final restart: %v", c.Since(), commits)
+	eventLines = append(eventLines, line)
+	log.Print(line)
+	close(stopTimeline)
+	timeline := <-timelineDone
 
 	report := check.Check(history, 2*time.Minute)
-	f, _ := os.Create(filepath.Join(*out, "history.jsonl"))
-	enc := json.NewEncoder(f)
-	for _, op := range history {
-		enc.Encode(op)
+	if err := writeJSONL(filepath.Join(*out, "history.jsonl.gz"), history, true); err != nil {
+		log.Fatal(err)
 	}
-	f.Close()
-	os.WriteFile(filepath.Join(*out, "events.log"), []byte(strings.Join(events.lines, "\n")+"\n"), 0o644)
+	writeJSONL(filepath.Join(*out, "events.jsonl"), c.Events(), false)
+	writeJSONL(filepath.Join(*out, "timeline.jsonl.gz"), timeline, true)
+	os.WriteFile(filepath.Join(*out, "events.log"), []byte(strings.Join(eventLines, "\n")+"\n"), 0o644)
 
 	summary := map[string]any{
-		"seed": *seed, "nodes": c.n, "clients": *clients, "duration_s": duration.Seconds(), "fsync": *fsync,
+		"seed": *seed, "nodes": c.N(), "clients": *clients, "duration_s": duration.Seconds(), "fsync": *fsync,
 		"operations": len(history), "completed": ok.Load(), "unknown": unk.Load(),
 		"faults": faults, "linearizable": report.Linearizable, "verdict_unknown": report.Unknown,
 		"keys": len(report.Keys), "torn_bytes_recovered": recovered,
+		"final_commit_indexes": commits, "history_offset_s": offset,
 	}
 	b, _ := json.MarshalIndent(summary, "", "  ")
 	os.WriteFile(filepath.Join(*out, "summary.json"), b, 0o644)
@@ -423,16 +306,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-
-func waitForLeader(c *cluster, limit time.Duration) {
-	end := time.Now().Add(limit)
-	for time.Now().Before(end) {
-		if c.leader() != 0 {
-			return
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	log.Print("no leader within ", limit)
-}
-
-var _ = io.Discard

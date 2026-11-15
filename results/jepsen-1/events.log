@@ -1,55 +1,82 @@
-   0.01s  started 5 nodes, seed 1, fsync true
-   4.93s  kill -9 the leader n2
-   9.18s  restarted n2
-   9.19s  isolated the leader n5
-  11.73s  kill -9 the leader n4
-  14.86s  restarted n4
-  14.86s  partition [5 4] | [1 3 2]
-  18.07s  partition [5 2 1] | [3 4]
-  24.62s  partition [3 4 2] | [5 1]
-  28.44s  kill -9 n2
-  32.69s  restarted n2
-  32.69s  isolated the leader n3
-  36.14s  partition [3 1 2] | [4 5]
-  40.91s  kill -9 n5
-  44.53s  restarted n5
-  44.53s  partition [2] | [1 4 3 5]
-  48.04s  partition [3 1] | [2 4 5]
-  53.32s  isolated the leader n1
-  57.68s  kill -9 n5
-  63.10s  restarted n5
-  63.10s  partition [2 4 5] | [1 3]
-  67.24s  kill -9 the leader n4
-  72.43s  restarted n4
-  72.43s  partition [4 1 3 2] | [5]
-  78.52s  kill -9 n1
-  82.24s  restarted n1
-  82.24s  isolated the leader n2
-  87.86s  partition [5 1 4 3] | [2]
-  90.58s  partition [3 5 4 1] | [2]
-  95.42s  isolated the leader n2
-  98.26s  kill -9 n4
- 105.05s  restarted n4
- 105.05s  isolated the leader n5
- 112.23s  kill -9 the leader n1
- 115.43s  restarted n1
- 115.43s  kill -9 n5
- 119.86s  restarted n5
- 119.86s  isolated the leader n2
- 122.83s  isolated the leader n1
- 125.98s  partition [1] | [2 3 4 5]
- 128.78s  partition [2 4 1] | [5 3]
- 134.21s  partition [5 2 4] | [3 1]
- 140.55s  partition [5 2 1 4] | [3]
- 144.55s  isolated the leader n5
- 151.05s  isolated the leader n1
- 157.92s  kill -9 n3
- 162.57s  restarted n3
- 162.59s  isolated the leader n5
- 166.62s  kill -9 the leader n1
- 173.02s  restarted n1
- 173.03s  kill -9 n2
- 177.67s  restarted n2
- 177.68s  isolated the leader n3
- 181.42s  healed; letting clients finish
- 190.09s  final restart of every node; commit indexes map[29992:5]
+   0.01s  started 5 nodes
+   5.02s  kill -9 the leader n5
+   9.28s  started n5
+   9.29s  isolated the leader n1
+  11.83s  healed the network
+  11.83s  kill -9 the leader n2
+  14.96s  started n2
+  14.96s  partition [5 4] | [1 3 2]
+  18.17s  healed the network
+  18.17s  partition [5 2 1] | [3 4]
+  24.73s  healed the network
+  24.73s  partition [3 4 2] | [5 1]
+  28.53s  healed the network
+  28.54s  kill -9 n2
+  32.80s  started n2
+  32.80s  isolated the leader n4
+  36.25s  healed the network
+  36.25s  partition [3 1 2] | [4 5]
+  41.01s  healed the network
+  41.01s  kill -9 n5
+  44.64s  started n5
+  44.64s  partition [2] | [1 4 3 5]
+  48.15s  healed the network
+  48.15s  partition [3 1] | [2 4 5]
+  53.42s  healed the network
+  53.42s  isolated the leader n5
+  57.78s  healed the network
+  57.79s  kill -9 n5
+  63.22s  started n5
+  63.22s  partition [2 4 5] | [1 3]
+  67.34s  healed the network
+  67.36s  kill -9 the leader n2
+  72.55s  started n2
+  72.55s  partition [4 1 3 2] | [5]
+  78.63s  healed the network
+  78.63s  kill -9 n1
+  82.35s  started n1
+  82.35s  isolated the leader n4
+  87.97s  healed the network
+  87.97s  partition [5 1 4 3] | [2]
+  90.69s  healed the network
+  90.69s  partition [3 5 4 1] | [2]
+  95.53s  healed the network
+  95.54s  isolated the leader n3
+  98.36s  healed the network
+  98.37s  kill -9 n4
+ 105.15s  started n4
+ 105.15s  isolated the leader n1
+ 112.32s  healed the network
+ 112.33s  kill -9 the leader n2
+ 115.53s  started n2
+ 115.53s  kill -9 n5
+ 119.96s  started n5
+ 119.97s  isolated the leader n4
+ 122.94s  healed the network
+ 122.94s  isolated the leader n3
+ 126.08s  healed the network
+ 126.08s  partition [1] | [2 3 4 5]
+ 128.89s  healed the network
+ 128.89s  partition [2 4 1] | [5 3]
+ 134.32s  healed the network
+ 134.32s  partition [5 2 4] | [3 1]
+ 140.65s  healed the network
+ 140.65s  partition [5 2 1 4] | [3]
+ 144.65s  healed the network
+ 144.65s  isolated the leader n2
+ 151.15s  healed the network
+ 151.15s  isolated the leader n5
+ 158.02s  healed the network
+ 158.03s  kill -9 n3
+ 162.67s  started n3
+ 162.67s  isolated the leader n2
+ 166.69s  healed the network
+ 166.70s  kill -9 the leader n1
+ 173.10s  started n1
+ 173.10s  kill -9 n2
+ 177.74s  started n2
+ 177.74s  isolated the leader n3
+ 181.48s  healed the network
+ 181.48s  started 5 nodes
+ 186.54s  kill -9 and restart every node
+ 190.15s  commit indexes after the final restart: map[29661:5]

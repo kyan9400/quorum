@@ -723,14 +723,32 @@ type Status struct {
 	Applied  uint64 `json:"applied"`
 	Last     uint64 `json:"last_index"`
 	Snapshot uint64 `json:"snapshot_index"`
+	// Progress is the leader's view of each follower: the highest index known
+	// to match its log, and the next one to send. Empty on a follower.
+	Progress map[uint64]Progress `json:"progress,omitempty"`
+}
+
+type Progress struct {
+	Match uint64 `json:"match"`
+	Next  uint64 `json:"next"`
 }
 
 func (n *Node) Status() Status {
-	return Status{
+	st := Status{
 		ID: n.id, State: n.state.String(), Term: n.term, Lead: n.lead,
 		Commit: n.commit, Applied: n.applied, Last: n.lastIndex(), Snapshot: n.offset(),
 	}
+	if n.state == Leader {
+		st.Progress = make(map[uint64]Progress, len(n.prs))
+		for id, pr := range n.prs {
+			st.Progress[id] = Progress{Match: pr.match, Next: pr.next}
+		}
+	}
+	return st
 }
+
+// SnapshotIndex is the index of the last entry the log has been compacted to.
+func (n *Node) SnapshotIndex() uint64 { return n.offset() }
 
 // SnapshotTerm is the term of the last entry the log has been compacted to.
 func (n *Node) SnapshotTerm() uint64 { return n.log[0].Term }

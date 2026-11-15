@@ -6,9 +6,10 @@ simulator that runs a whole cluster under crashes, partitions and a hostile
 network inside one process, and a linearizability checker that verifies every
 history the clients saw.
 
-> **Status: stage 2 of 4.** Consensus, state machine, simulator and checker;
-> real processes with a write-ahead log, tested Jepsen-style and benchmarked.
-> A dashboard and a deployment come next.
+> **Status: stage 3 of 4.** Consensus, state machine, simulator and checker;
+> real processes with a write-ahead log, tested Jepsen-style and benchmarked;
+> a dashboard to break a live cluster with and to replay recorded runs. A
+> public deployment comes next.
 
 ## The result so far
 
@@ -33,16 +34,18 @@ minutes each, ten clients, a fault every five seconds on average:
 
 | run | operations | partitions | leader isolated | `kill -9` | `kill -9` the leader | verdict |
 | --- | --- | --- | --- | --- | --- | --- |
-| seed 1 | 49,685 | 14 | 12 | 8 | 5 | linearizable |
-| seed 2 | 52,714 | 16 | 5 | 12 | 5 | linearizable |
-| seed 3 | 52,162 | 12 | 7 | 6 | 9 | linearizable |
+| seed 1 | 49,183 | 14 | 12 | 8 | 5 | linearizable |
+| seed 2 | 50,942 | 16 | 5 | 12 | 5 | linearizable |
+| seed 3 | 50,958 | 12 | 7 | 6 | 9 | linearizable |
 
-154,561 operations through 111 faults, every history linearizable. After each
+151,083 operations through 111 faults, every history linearizable. After each
 run every node was killed and restarted from disk once more, and all five came
-back at the same commit index. 61 operations ended with an unknown outcome -
+back at the same commit index. 65 operations ended with an unknown outcome -
 the client's deadline passed during a fault - and the checker allowed for both
-possibilities, as it must. Summaries, fault timelines and full histories are in
-`results/`.
+possibilities, as it must. Summaries, fault logs, full histories and each
+node's state four times a second are in `results/`, and the dashboard replays
+them. (The nemesis is seeded, so the faults match the first recording of these
+runs; the operation counts differ slightly, since clients race the clock.)
 
 The harness (`cmd/jepsen`) runs every node-to-node link through its own proxy,
 one per direction, so a partition can be asymmetric and a cut link
@@ -85,6 +88,50 @@ was running. Five nodes are slower than three on this machine because all five
 share its four cores; on separate machines the gap would be smaller. Treat
 every figure here as a lower bound from a small shared box, not as a
 comparison with production systems.
+
+## The dashboard
+
+`cmd/dash` does two things.
+
+**A live cluster you can break.** It runs five `quorumd` processes behind
+cuttable links - the same harness as the Jepsen runs, in `internal/cluster` -
+and six clients against them, half following the leader and half pinned to one
+node. The page shows each node's role, term and log four times a second: how
+far each log reaches, how much of it is committed, how much is compacted into a
+snapshot, and what the leader believes each follower holds. Buttons kill the
+leader, cut it off, split the network at random, or kill and isolate single
+nodes. If it is left broken it heals itself after 30 seconds.
+
+The clients' history is checked for linearizability while it runs, ten seconds
+at a time. A linearizability check has to know each key's state at the start
+of what it checks, so the workload moves to fresh keys every window - window 41
+touches only keys that did not exist before it - and a window is checked once
+its last operation has answered or given up. The first version numbered its
+windows from zero each time the dashboard started, while the data directory
+survived restarts; the first two windows found the previous run's values in
+their "fresh" keys, and the checker reported both as not linearizable. The keys
+now carry a tag per start.
+
+**Recorded runs.** The Jepsen harness polls every node four times a second and
+writes the timeline next to the history. The replay draws one lane per node -
+leader, follower, candidate, killed, or on the minority side of a partition -
+over the clients' throughput and latency, with every fault marked. An isolated
+leader is visible carrying on in its old term beside the new leader; that is
+correct, because it can no longer commit or serve a read, and the pinned
+clients that ask it get no answer until it rejoins.
+
+```bash
+go build -o bin/ ./cmd/...
+bin/dash -bin bin/quorumd -listen 127.0.0.1:8080     # then open http://127.0.0.1:8080
+```
+
+**What the live view shows that the tests do not.** There is no PreVote. A node
+cut off from the rest campaigns over and over, raising its term each time, and
+when it returns its high term forces the working leader to step down. Nothing
+incorrect happens - the simulator and the checker agree - but the dashboard
+makes the cost obvious: a few faults in a row and the term is in the twenties.
+etcd's PreVote, where a node first asks whether it could win before raising its
+term, is the fix and is not implemented yet.
 
 ## How it is built
 
@@ -166,7 +213,7 @@ before it asserts anything.
 ## Running it
 
 ```bash
-go test ./...                       # 34 tests
+go test ./...                       # 35 tests
 go run ./cmd/sim -seeds 2000        # the simulation
 go run ./cmd/sim -seed 7            # one seed, replayed exactly
 
@@ -193,8 +240,8 @@ and a sequence number - the `client` package supplies both and retries safely.
 1. **Consensus, state machine, simulator, checker** - done.
 2. **Real processes** - done: a write-ahead log, an HTTP transport, a client
    library, Jepsen-style testing and benchmarks, above.
-3. **A dashboard**: the cluster's roles, terms and log positions live, and the
-   history of a run with its partitions and crashes.
+3. **A dashboard** - done: a live cluster to break, and replays of recorded
+   runs, above.
 4. **Deployed**, with a write-up whose every number comes from a run that was
    executed.
 

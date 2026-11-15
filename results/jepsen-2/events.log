@@ -1,58 +1,79 @@
-   0.00s  started 5 nodes, seed 2, fsync true
-   6.24s  isolated the leader n1
-   9.69s  kill -9 n5
-  13.84s  restarted n5
-  13.84s  partition [2 4] | [3 5 1]
-  20.38s  partition [3 5] | [4 2 1]
-  24.23s  partition [5] | [3 2 4 1]
-  30.17s  kill -9 n3
-  32.78s  restarted n3
-  32.78s  partition [5 2 3] | [4 1]
-  38.93s  kill -9 n4
-  45.69s  restarted n4
-  45.69s  partition [1 2] | [5 4 3]
-  48.53s  kill -9 n2
-  53.56s  restarted n2
-  53.56s  partition [2] | [5 3 1 4]
-  57.11s  partition [3 5] | [4 2 1]
-  61.74s  partition [1 5] | [3 4 2]
-  65.30s  isolated the leader n4
-  71.40s  kill -9 n5
-  77.65s  restarted n5
-  77.66s  isolated the leader n2
-  82.49s  isolated the leader n1
-  86.83s  kill -9 n4
-  91.27s  restarted n4
-  91.27s  kill -9 n4
-  98.38s  restarted n4
-  98.39s  isolated the leader n3
- 102.91s  kill -9 n1
- 107.40s  restarted n1
- 107.41s  kill -9 the leader n2
- 113.39s  restarted n2
- 113.40s  kill -9 the leader n4
- 120.14s  restarted n4
- 120.14s  partition [3] | [2 4 5 1]
- 123.55s  kill -9 n5
- 126.88s  restarted n5
- 126.88s  partition [4 5 2] | [1 3]
- 130.92s  kill -9 n1
- 138.19s  restarted n1
- 138.19s  partition [4 3 2] | [5 1]
- 141.64s  kill -9 n1
- 147.07s  restarted n1
- 147.07s  partition [4] | [1 5 3 2]
- 149.89s  partition [5 1 2 4] | [3]
- 155.07s  partition [4 2] | [5 3 1]
- 157.65s  partition [5] | [1 3 4 2]
- 162.20s  kill -9 the leader n1
- 164.95s  restarted n1
- 164.96s  kill -9 n4
- 170.66s  restarted n4
- 170.66s  partition [5 3 2 4] | [1]
- 176.49s  kill -9 the leader n2
- 179.20s  restarted n2
- 179.21s  kill -9 the leader n5
- 183.47s  restarted n5
- 183.47s  healed; letting clients finish
- 192.13s  final restart of every node; commit indexes map[31673:5]
+   0.00s  started 5 nodes
+   6.33s  isolated the leader n4
+   9.78s  healed the network
+   9.79s  kill -9 n5
+  13.93s  started n5
+  13.93s  partition [2 4] | [3 5 1]
+  20.48s  healed the network
+  20.48s  partition [3 5] | [4 2 1]
+  24.33s  healed the network
+  24.33s  partition [5] | [3 2 4 1]
+  30.27s  healed the network
+  30.27s  kill -9 n3
+  32.88s  started n3
+  32.88s  partition [5 2 3] | [4 1]
+  39.02s  healed the network
+  39.02s  kill -9 n4
+  45.79s  started n4
+  45.79s  partition [1 2] | [5 4 3]
+  48.63s  healed the network
+  48.63s  kill -9 n2
+  53.65s  started n2
+  53.65s  partition [2] | [5 3 1 4]
+  57.20s  healed the network
+  57.20s  partition [3 5] | [4 2 1]
+  61.83s  healed the network
+  61.83s  partition [1 5] | [3 4 2]
+  65.39s  healed the network
+  65.40s  isolated the leader n2
+  71.49s  healed the network
+  71.49s  kill -9 n5
+  77.75s  started n5
+  77.75s  isolated the leader n1
+  82.58s  healed the network
+  82.58s  isolated the leader n3
+  86.91s  healed the network
+  86.92s  kill -9 n4
+  91.36s  started n4
+  91.36s  kill -9 n4
+  98.47s  started n4
+  98.47s  isolated the leader n5
+ 103.00s  healed the network
+ 103.01s  kill -9 n1
+ 107.49s  started n1
+ 107.50s  kill -9 the leader n2
+ 113.49s  started n2
+ 113.50s  kill -9 the leader n5
+ 120.23s  started n5
+ 120.23s  partition [3] | [2 4 5 1]
+ 123.64s  healed the network
+ 123.64s  kill -9 n5
+ 126.97s  started n5
+ 126.97s  partition [4 5 2] | [1 3]
+ 131.00s  healed the network
+ 131.00s  kill -9 n1
+ 138.27s  started n1
+ 138.27s  partition [4 3 2] | [5 1]
+ 141.73s  healed the network
+ 141.73s  kill -9 n1
+ 147.16s  started n1
+ 147.16s  partition [4] | [1 5 3 2]
+ 149.98s  healed the network
+ 149.98s  partition [5 1 2 4] | [3]
+ 155.16s  healed the network
+ 155.16s  partition [4 2] | [5 3 1]
+ 157.74s  healed the network
+ 157.74s  partition [5] | [1 3 4 2]
+ 162.28s  healed the network
+ 162.29s  kill -9 the leader n3
+ 165.04s  started n3
+ 165.04s  kill -9 n4
+ 170.74s  started n4
+ 170.74s  partition [5 3 2 4] | [1]
+ 176.56s  healed the network
+ 176.57s  kill -9 the leader n3
+ 179.28s  started n3
+ 179.29s  kill -9 the leader n5
+ 183.54s  started 5 nodes
+ 188.59s  kill -9 and restart every node
+ 192.21s  commit indexes after the final restart: map[30598:5]

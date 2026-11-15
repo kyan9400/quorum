@@ -1,6 +1,6 @@
 {
   "clients": 10,
-  "completed": 49664,
+  "completed": 49164,
   "duration_s": 180,
   "faults": {
     "isolate-leader": 12,
@@ -8,13 +8,17 @@
     "kill-leader": 5,
     "partition": 14
   },
+  "final_commit_indexes": {
+    "29661": 5
+  },
   "fsync": true,
+  "history_offset_s": 0.617386536,
   "keys": 5,
   "linearizable": true,
   "nodes": 5,
-  "operations": 49685,
+  "operations": 49183,
   "seed": 1,
   "torn_bytes_recovered": 0,
-  "unknown": 21,
+  "unknown": 19,
   "verdict_unknown": false
 }

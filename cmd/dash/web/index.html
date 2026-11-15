@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quorum</title>
+<meta name="description" content="A Raft key-value store you can break: a live five-node cluster, and replays of Jepsen-style runs.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%2334d399' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%2334d399'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="16" cy="16" r="5" fill="currentColor"/></svg>
+    <div>
+      <div class="name">Quorum</div>
+      <div class="tag">Raft, from scratch, tested like Jepsen</div>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <a href="#live" data-tab="live" role="tab">Live cluster</a>
+    <a href="#runs" data-tab="runs" role="tab">Recorded runs</a>
+  </nav>
+  <a class="gh" href="https://github.com/kyan9400/quorum" rel="noopener">Source</a>
+</header>
+
+<main>
+<!-- ================================================================ live -->
+<section id="view-live" class="view" hidden>
+  <div class="intro">
+    <p>Five <code>quorumd</code> processes on one machine, each with its own write-ahead log, talking over links that can be cut. Six clients read, write, append and compare-and-set against them the whole time, and their history is checked for linearizability ten seconds at a time. <b>Break it</b>: kill nodes, cut the leader off, split the network. The cluster is shared with everyone looking at this page, and puts itself back together after <span data-bind="autoheal">30</span>&nbsp;s left alone.</p>
+  </div>
+
+  <div class="grid live-grid">
+    <div class="card cluster-card">
+      <div class="card-head">
+        <h2>Cluster</h2>
+        <div class="status-line" id="net-line"></div>
+      </div>
+      <svg id="ring" class="ring" viewBox="0 0 460 375" role="img" aria-label="Cluster diagram"></svg>
+      <div class="legend">
+        <span><i class="dot leader"></i>leader</span>
+        <span><i class="dot follower"></i>follower</span>
+        <span><i class="dot candidate"></i>candidate</span>
+        <span><i class="dot quiet"></i>starting</span>
+        <span><i class="dot down"></i>killed</span>
+        <span><i class="line-cut"></i>link cut</span>
+      </div>
+    </div>
+
+    <div class="card break-card">
+      <div class="card-head"><h2>Break it</h2><div class="heal-in" id="heal-in"></div></div>
+      <div class="actions">
+        <button data-act="kill-leader" class="btn danger"><b>Kill the leader</b><span>kill -9: no shutdown, no flush</span></button>
+        <button data-act="isolate-leader" class="btn danger"><b>Isolate the leader</b><span>it keeps thinking it leads</span></button>
+        <button data-act="partition" class="btn danger"><b>Random partition</b><span>split the five into two sides</span></button>
+        <button data-act="heal" class="btn calm"><b>Heal everything</b><span>restore links, restart the dead</span></button>
+      </div>
+      <p class="hint">Or act on one node from the table below. With three of five gone nothing can commit, and clients get the honest answer: <i>unknown</i>.</p>
+      <div class="verdict" id="verdict"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Logs</h2>
+      <div class="muted small">bar = the node's log; <span class="key k-snap"></span>compacted into a snapshot, <span class="key k-commit"></span>committed, <span class="key k-tail"></span>written but not yet committed. Ticks on followers mark what the leader knows they hold.</div>
+    </div>
+    <div class="table-wrap">
+      <table class="nodes" id="nodes">
+        <thead><tr><th>node</th><th>role</th><th class="num">term</th><th class="logcol">log <span id="log-range" class="range"></span></th><th class="num">commit</th><th class="num">last</th><th class="num">keys</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid two">
+    <div class="card">
+      <div class="card-head"><h2>Linearizability</h2><div class="muted small" id="lin-sum"></div></div>
+      <div class="windows" id="windows"></div>
+      <p class="hint">Each square is ten seconds of history. The workload moves to fresh keys each window, so a window can be checked on its own once its last operation has answered or given up. Operations that gave up count as <i>may have happened</i>: the checker must find an order that works either way.</p>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Clients</h2><div class="muted small" id="rate-sum"></div></div>
+      <svg id="rate" class="rate" viewBox="0 0 520 150" preserveAspectRatio="none"></svg>
+      <div class="axis-note"><span>60 s ago</span><span><i class="sw ok"></i>answered <i class="sw unk"></i>gave up (unknown) <i class="sw lat"></i>median latency</span><span>now</span></div>
+    </div>
+  </div>
+
+  <div class="grid two">
+    <div class="card">
+      <div class="card-head"><h2>What happened</h2></div>
+      <ol class="events" id="events"></ol>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Latest operations</h2></div>
+      <div class="table-wrap ops-wrap">
+        <table class="ops" id="ops"><thead><tr><th>client</th><th>op</th><th>key</th><th>result</th><th class="num">ms</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ runs -->
+<section id="view-runs" class="view" hidden>
+  <div class="intro">
+    <p>Recorded Jepsen-style runs on Linux: five real processes with <code>fsync</code> on, ten clients, and a nemesis that partitions the network, isolates the leader and <code>kill -9</code>s nodes every few seconds. Every node was polled four times a second. Drag across the timeline to zoom; double-click to zoom out.</p>
+  </div>
+  <div class="run-picker" id="run-picker"></div>
+  <div class="stats" id="run-stats"></div>
+  <div class="card">
+    <div class="card-head"><h2 id="run-title">Timeline</h2><div class="muted small" id="run-range"></div></div>
+    <div id="timeline" class="timeline"></div>
+    <div class="legend">
+      <span><i class="dot leader"></i>leader (term inside)</span>
+      <span><i class="dot follower"></i>follower</span>
+      <span><i class="dot candidate"></i>candidate</span>
+      <span><i class="dot quiet"></i>up, not answering</span>
+      <span><i class="dot down"></i>killed</span>
+      <span><i class="hatch"></i>on the minority side</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Nemesis</h2><div class="muted small">every fault, in order</div></div>
+    <ol class="events tall" id="run-events"></ol>
+  </div>
+</section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="tip" id="tip"></div>
+<script src="app.js"></script>
+</body>
+</html>
